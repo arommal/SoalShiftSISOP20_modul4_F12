@@ -47,6 +47,8 @@ void encrypt1(char *path)		// ke kiri
 	if (!strcmp(path, ".") || !strcmp(path, ".."))
 		return;
 
+	printf("encrypt path: %s\n", path);
+
 	int temp = 0, i, j;
 
 	int endid = ext_id(path);
@@ -72,6 +74,8 @@ void decrypt1(char *path)			// ke kanan
 {
 	if(!strcmp(path, ".") || !strcmp(path, ".."))
 		return;
+
+	printf("decrypt path: %s\n", path);
 
 	int temp = 0, i, j;
 
@@ -158,6 +162,7 @@ static int xmp_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 		st.st_mode = de->d_type << 12;
 
 		printf("before: %s\n", de->d_name);
+		printf("a: %s\n", a);
 		if(a != NULL)
 			encrypt1(de->d_name);
 		printf("after: %s\n", de->d_name);
@@ -433,37 +438,6 @@ static int xmp_open(const char *path, struct fuse_file_info *fi)
 	return 0;
 }
 
-static int xmp_mknod(const char *path, mode_t mode, dev_t rdev) {
-	int res;
-	char fpath[1000];
-	char *a = strstr(path, en1);
-	if(a != NULL)
-		decrypt1(a);
-
-	if(strcmp(path, "/") == 0){
-		path = dirPath;
-		sprintf(fpath, "%s", path);
-	}else{
-		sprintf(fpath, "%s%s", dirPath, path);
-	}
-
-	/* On Linux this could just be 'mknod(path, mode, rdev)' but this
-	   is more portable */
-	if (S_ISREG(mode)) {
-		res = open(path, O_CREAT | O_EXCL | O_WRONLY, mode);
-		if (res >= 0)
-			res = close(res);
-	} else if (S_ISFIFO(mode))
-		res = mkfifo(path, mode);
-	else
-		res = mknod(path, mode, rdev);
-
-	if (res == -1)
-		return -errno;
-
-	return 0;
-}
-
 static int xmp_unlink(const char *path) {
 	int res;
 	char fpath[1000];
@@ -498,7 +472,6 @@ static struct fuse_operations xmp_oper = {
 	.utimens = xmp_utimens,
 	.access = xmp_access,
 	.open = xmp_open,
-	.mknod = xmp_mknod,
 	.unlink = xmp_unlink,
 };
 
