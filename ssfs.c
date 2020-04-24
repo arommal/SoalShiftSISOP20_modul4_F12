@@ -15,7 +15,7 @@ static const char *dirPath = "/home/falcon/Documents";
 //ada 87 isi base
 char *base = {"9(ku@AW1[Lmvgax6q`5Y2Ry?+sF!^HKQiBXCUSe&0M.b%rI'7d)o4~VfZ*{#:}ETt$3J-zpc]lnh8,GwP_ND|jO"};
 const int key = 10;
-char en1[10] = "encv1_";
+char *en1 = "encv1_";
 // char *en2 = "encv2";
 
 int ext_id(char* path){
