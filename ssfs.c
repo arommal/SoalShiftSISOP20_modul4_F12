@@ -42,7 +42,7 @@ int slash_id(char* path, int mentok){
 	return mentok;
 }
 
-void encrypt1(char *path)		// ke kiri
+void encrypt1(char *path)		// ke kanan
 {
 	if (!strcmp(path, ".") || !strcmp(path, ".."))
 		return;
@@ -70,7 +70,7 @@ void encrypt1(char *path)		// ke kiri
 	}
 }
 
-void decrypt1(char *path)			// ke kanan
+void decrypt1(char *path)			// ke kiri
 {
 	if(!strcmp(path, ".") || !strcmp(path, ".."))
 		return;
