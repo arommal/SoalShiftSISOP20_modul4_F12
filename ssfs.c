@@ -28,30 +28,30 @@ int x = 0;
 
 void syncContents(char *syncpath, char *realpath)
 {
-	int real_fd, sync_fd, n, err;
-	unsigned char buffer[4096];
+	// int real_fd, sync_fd, n, err;
+	char buffer[4096];
 
-	real_fd = open(realpath, O_RDONLY);
-	sync_fd = open(syncpath, O_CREAT | O_WRONLY | O_EXCL, 0666);
+	DIR *dir;
+	FILE *realfile, *syncfile;
+	struct dirent *dp;
 
-	while(1){
-		err = read(real_fd, buffer, 4096);
-        if (err == -1) {
-            printf("Error reading file.\n");
-            return;
-        }
-        n = err;
+	dir = opendir(realpath);
 
-        if (n == 0) break;
+	while((dp = readdir(dir)) != NULL){
+		char srcP[1000], destP[1000];
+		sprintf(srcP, "%s/%s", realpath, dp->d_name);
+		sprintf(destP, "%s/%s", syncpath, dp->d_name);
 
-        err = write(sync_fd, buffer, n);
-        if (err == -1) {
-            printf("Error writing to file.\n");
-            return;
-        }
+		realfile = fopen(srcP, "r");
+		syncfile = fopen(destP, "w");
+
+		size_t num;
+
+		while((num = fread(buffer, 1, sizeof(buffer), realfile)) > 0)
+			fwrite(buffer, 1, num, syncfile);
 	}
-	close(real_fd);
-	close(sync_fd);
+
+	closedir(dir);
 }
 
 char *checkSynchronize(char *foldername, char *syncpath)
