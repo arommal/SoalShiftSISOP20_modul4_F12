@@ -237,8 +237,7 @@ void enkripsi2(char *fpath)
 				char ffpath[1000];
 				sprintf(ffpath,"%s/%s",fpath, dir->d_name);
 				enkripsi2(ffpath);
-			}
-			else{
+			}else{
 				char fffpath[1000];
 				sprintf(fffpath,"%s/%s",fpath, dir->d_name);
 				char ffpath[1000];
@@ -251,8 +250,7 @@ void enkripsi2(char *fpath)
 					if (lmao ==0){
 						char* argv[] = {"split","-b","1024","-a","3","-d",fffpath,ffpath, NULL};
 						execv("/usr/bin/split",argv);
-					}
-					else {
+					}else {
 						while ((wait(&status))>0);
 						char *argv[]={"rm",fffpath, NULL};
 						execv("/bin/rm",argv);
