@@ -148,22 +148,15 @@ Implementasi dilarang menggunakan symbolic links dan thread.
 3. Untuk log level WARNING, merupakan pencatatan log untuk syscall rmdir dan unlink.
 4. Sisanya, akan dicatat dengan level INFO.
 5. Format untuk logging yaitu:
-> [LEVEL]::[yy][mm][dd]-[HH]:[MM]:[SS]::[CMD]::[DESC ...]
-
->> LEVEL : Level logging
-
->> yy : Tahun dua digit
-
->> mm : Bulan dua digit
-
->> dd : Hari dua digit
-
->> HH : Jam dua digit
-
->> MM : Menit dua digit
-
->> SS : Detik dua digit
-
->> CMD : System call yang terpanggil
-
->> DESC : Deskripsi tambahan (bisa lebih dari satu, dipisahkan dengan ::)
+    ```
+    [LEVEL]::[yy][mm][dd]-[HH]:[MM]:[SS]::[CMD]::[DESC ...]
+    LEVEL : Level logging
+    yy : Tahun dua digit
+    mm : Bulan dua digit
+    dd : Hari dua digit
+    HH : Jam dua digit
+    MM : Menit dua digit
+    SS : Detik dua digit
+    CMD : System call yang terpanggil
+    DESC : Deskripsi tambahan (bisa lebih dari satu, dipisahkan dengan ::)
+    ```
