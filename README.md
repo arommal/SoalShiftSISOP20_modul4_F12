@@ -123,6 +123,86 @@ Pemanggilan fungsi dekripsi dilakukan di utility functions `getattr`, `mkdir`, `
 
 - ### Penyelesaian
 
+Pertama, kita melakukan pengecekkan pada nama folder ketika di rename, sehingga pada fungsi rename kita menggunakan fungsi strstr dengan implementasi
+```c
+	if (strstr(to, en2) != NULL){
+		enkripsi2(topath);
+		tulisLog2("ENCRYPT2", from, to);
+	}
+
+	if (strstr(from, en2) != NULL && strstr(to, en2) == NULL){
+		dekripsi2(topath);
+		tulisLog2("DECRYPT2", from, to);
+	}
+```
+Disini kita memanggil fungsi ``enkripsi2`` ketika penamaan folder yang sebelumnya tidak mengandung "encv2_" ke string yang mengandung "encv2_". Ketika yang terjadi adalah sebaliknya, maka kita memanggil fungsi ``dekripsi2``. 
+
+Di fungsi ``enkripsi2`` sendiri, kita mengecek direktori yang telah kita pass sebelumnya (path direktori yang telah direname) dan kita mengecek file didalamnya satu persatu, jika ternyata file yang sedang dicek adalah sebuah direktori, maka kita akan secara rekursi memanggil fungsi enkripsi2 kembali dengan path yang telah diupdate, impleementasi ketika menemukan folder adalah
+```c
+            else if (S_ISDIR(lol.st_mode)){
+				if (strcmp(dir->d_name,".")==0 || strcmp(dir->d_name,"..")==0) continue;
+				char ffpath[1000];
+				sprintf(ffpath,"%s/%s",fpath, dir->d_name);
+				enkripsi2(ffpath);
+            }
+```
+Sedangkan ketika kita menemukan file yang bukan direktori, maka kita melakukan pembagian menjadi beberapa file dengan menggunakan fungsi split, untuk implementasinya, kami menggunakan fork, exec, dan wait. Setelah di split, kita akan meremove filenya. Implementasinya adlaah sebagai berikut
+```c
+             else{
+				char fffpath[1000];
+				sprintf(fffpath,"%s/%s",fpath, dir->d_name);
+				char ffpath[1000];
+				sprintf(ffpath,"%s.",fffpath);
+				pid_t child_id;
+				child_id = fork();
+				int status;
+				if (child_id == 0){
+					pid_t lmao = fork();
+					if (lmao ==0){
+						char* argv[] = {"split","-b","1024","-a","3","-d",fffpath,ffpath, NULL};
+						execv("/usr/bin/split",argv);
+					}else {
+						while ((wait(&status))>0);
+						char *argv[]={"rm",fffpath, NULL};
+						execv("/bin/rm",argv);
+					}	
+				}
+```
+
+Berikutnya adlaah fungsi dekripsi2, sama seperti enkripsi2, kita membagi kasus ketika kita menemukan folder dan ketika menemukan file. Ketika menemukan folder, implementasinya adalah sama seperti enkripsi2 yang telah dijelaskan diatas yaitu 
+```c
+        if (S_ISDIR(lol.st_mode)){
+			sprintf(dirPath, "%s/%s", dir, de->d_name);
+			dekripsi2(dirPath);
+        }
+```
+Sedangkan ketika menemukan file, kita melakukan pembuatan file yang tanpa ekstensi yang telah kita tambahkan saat mengenkrip, dan kemudian kita menggunakan count untuk mengecek file tersebut dari 000 hingga akhir, jika ada kita copy isi filenya ke file yang telah kita buat sbelumnya dan ketika tidak ada file yang ditemukan, maka kita break. 
+```c
+        else if (!S_ISDIR(lol.st_mode)){
+			sprintf(filePath, "%s/%s", dir, de->d_name);
+			filePath[strlen(filePath) - 4] = '\0';
+			// decription2(filePath);
+			FILE *check = fopen(filePath, "r");
+			if (check != NULL)
+				return;
+			FILE *file = fopen(filePath, "w");
+			int count = 0;
+			char topath[1000];
+			sprintf(topath, "%s.%03d", filePath, count);
+			void *buffer = malloc(1024);
+			while (1){
+				FILE *op = fopen(topath, "rb");
+				if (op == NULL)
+					break;
+				size_t readSize = fread(buffer, 1, 1024, op);
+				fwrite(buffer, 1, readSize, file);
+				fclose(op);
+				remove(topath);
+				count++;
+				sprintf(topath, "%s.%03d", filePath, count);
+			}
+```
+
 ***
 
 ## Soal 3: Sinkronisasi direktori otomatis
@@ -160,3 +240,116 @@ Implementasi dilarang menggunakan symbolic links dan thread.
     CMD : System call yang terpanggil
     DESC : Deskripsi tambahan (bisa lebih dari satu, dipisahkan dengan ::)
     ```
+    
+- ### Penyelesaian
+Kami membuat 2 fungsi tambahan yaitu ``tulislog`` dan ``tulislog2``, dimana fungsi tulislog adalah fungsi yang menghandle ketika perintha yang dilakukan hanya membutuhkan 1 buah deskripsi, seperti rmdir, mkdir, ls. Sedangkan fungsi tulislog2 adalah fungsi yang menghandle ketika perintah yang dilakukan membutuhkan 2 buah deskripsi seperti rename, mv. Implementasinya adlaah menggunakan local time, yang kemudian kita menulis kedalam log sesuai perintah soal. 
+```c
+void tulisLog(char *nama, char *fpath)
+{
+	time_t rawtime;
+	struct tm *timeinfo;
+	time(&rawtime);
+	timeinfo = localtime(&rawtime);
+
+	char haha[1000];
+
+	FILE *file;
+	file = fopen("/home/falcon/fs.log", "a");
+	if (file == NULL)
+		file = fopen("/home/falcon/fs.log", "w");
+
+	if (strcmp(nama, "RMDIR") == 0 || strcmp(nama, "UNLINK") == 0)
+		sprintf(haha, "WARNING::%d%.2d%.2d-%.2d:%.2d:%.2d::%s::%s\n", timeinfo->tm_year - 100, timeinfo->tm_mon + 1, timeinfo->tm_mday, timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec, nama, fpath);
+	else
+		sprintf(haha, "INFO::%d%.2d%.2d-%.2d:%.2d:%.2d::%s::%s\n", timeinfo->tm_year - 100, timeinfo->tm_mon + 1, timeinfo->tm_mday, timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec, nama, fpath);
+
+	fputs(haha, file);
+	fclose(file);
+	return;
+}
+
+void tulisLog2(char *nama, const char *from, const char *to)
+{
+	time_t rawtime;
+	struct tm *timeinfo;
+	time(&rawtime);
+	timeinfo = localtime(&rawtime);
+
+	char haha[1000];
+
+	FILE *file;
+	file = fopen("/home/falcon/fs.log", "a");
+	if (file == NULL)
+		file = fopen("/home/falcon/fs.log", "w");
+
+	if (strcmp(nama, "RMDIR") == 0 || strcmp(nama, "UNLINK") == 0)
+		sprintf(haha, "WARNING::%d%.2d%.2d-%.2d:%.2d:%.2d::%s::%s::%s\n", timeinfo->tm_year - 100, timeinfo->tm_mon + 1, timeinfo->tm_mday, timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec, nama, from, to);
+	else
+		sprintf(haha, "INFO::%d%.2d%.2d-%.2d:%.2d:%.2d::%s::%s::%s\n", timeinfo->tm_year - 100, timeinfo->tm_mon + 1, timeinfo->tm_mday, timeinfo->tm_hour, timeinfo->tm_min, timeinfo->tm_sec, nama, from, to);
+
+	fputs(haha, file);
+	fclose(file);
+	return;
+}
+```
+Kemudian, kita akan memanggil kedua fungsi ini, di setiap fungsi yang ada dalam fuse sesuai dengan perintahnya. Sebagai contoh ini adalah fungsi rename dan fungsi rmdir.
+```
+static int xmp_rename(const char *from, const char *to)
+{
+	int res;
+	char frompath[1000], topath[1000];
+
+	char *a = strstr(to, en1);
+
+	if (a != NULL)
+		decrypt1(a);
+
+	sprintf(frompath, "%s%s", dirPath, from);
+	sprintf(topath, "%s%s", dirPath, to);
+
+	res = rename(frompath, topath);
+	if (res == -1)
+		return -errno;
+
+	tulisLog2("RENAME", frompath, topath);                          // Pemanggilan fungsi tulislog2
+
+	if (strstr(to, en2) != NULL){
+		enkripsi2(topath);
+		tulisLog2("ENCRYPT2", from, to);
+	}
+
+	if (strstr(from, en2) != NULL && strstr(to, en2) == NULL){
+		dekripsi2(topath);
+		tulisLog2("DECRYPT2", from, to);
+	}
+
+	return 0;
+}
+```
+
+```c
+static int xmp_rmdir(const char *path)
+{
+	int res;
+	char fpath[1000];
+	char *a = strstr(path, en1);
+	if (a != NULL)
+		decrypt1(a);
+
+	if (strcmp(path, "/") == 0){
+		path = dirPath;
+		sprintf(fpath, "%s", path);
+	}else{
+		sprintf(fpath, "%s%s", dirPath, path);
+	}
+
+	res = rmdir(fpath);
+    
+	tulisLog("RMDIR", fpath);                               // Pemanggilan fungsi tulislog
+
+	if (res == -1)
+		return -errno;
+
+	return 0;
+}
+```
