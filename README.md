@@ -218,6 +218,80 @@ Implementasi dilarang menggunakan symbolic links dan thread.
 
 - ### Penyelesaian
 
+Implementasi sinkronisasi sejauh ini yang telah kami lakukan adalah saat terbuatnya folder baru yang namanya berisi awalan "sync_". Jika terdeteksi demikian, maka konten dari folder pasangannya (folder dengan nama yang sama namun tanpa awalan "sync_") akan di-copy ke folder "sync_" tersebut. Pendeteksian apabila nama folder berisi "sync_" atau tidak dilakukan di fungsi `readdir()` dan `mkdir()` dengan fungsi berikut:
+
+	```C
+	char *checkSynchronize(char *foldername, char *syncpath)
+	{	
+		if(strstr(foldername, syncs) == NULL){
+			// if foldername is real folder
+			sprintf(syncpath, "%s/%s%s", dirPath, syncs, foldername);
+
+			// check if syncpath exists
+			DIR *dir;
+			dir = opendir(syncpath);
+
+			if(dir == NULL)
+				return NULL;
+			else
+				return syncpath;
+			closedir(dir);
+		}else{
+			// if foldername is sync folder
+			char real[1000];
+			int i, j = 0;
+			for(i=strlen(syncs)-1; i<strlen(foldername); i++){
+				real[j] = foldername[i];
+				j++;
+			}
+			real[j] = '\0';
+
+			sprintf(syncpath, "%s/%s", dirPath, real);
+
+			DIR *dir;
+			dir = opendir(syncpath);
+
+			if(dir == NULL)
+				return NULL;
+			else
+				return syncpath;
+			closedir(dir);
+		}
+	}
+	```
+Fungsi di atas akan mengembalikan direktori folder "sync_" jika yang di-passing ke fungsinya adalah folder asli. Jika yang di-passing ke fungsinya adalah folder "sync_", maka yang dikembalikan adalah direktori folder asli. Jika tidak keduanya, maka NULL akan dikembalikan.
+
+Kemudian, jika selain value NULL yang dikembalikan maka akan dijalankan fungsi `syncContents()`:
+
+	```C
+	void syncContents(char *syncpath, char *realpath)
+	{
+		char buffer[4096];
+
+		DIR *dir;
+		FILE *realfile, *syncfile;
+		struct dirent *dp;
+
+		dir = opendir(realpath);
+
+		while((dp = readdir(dir)) != NULL){
+			char srcP[1000], destP[1000];
+			sprintf(srcP, "%s/%s", realpath, dp->d_name);
+			sprintf(destP, "%s/%s", syncpath, dp->d_name);
+
+			realfile = fopen(srcP, "r");
+			syncfile = fopen(destP, "w");
+
+			size_t num;
+
+			while((num = fread(buffer, 1, sizeof(buffer), realfile)) > 0)
+				fwrite(buffer, 1, num, syncfile);
+		}
+		closedir(dir);
+	}
+	```
+Fungsi di atas akan memberi permission read ke file descriptor untuk file asli, dan permission write ke file descriptor untuk file "sync_". Lalu akan dilakukan looping untuk write data file asli ke file "sync_" dengan menggunakan buffer untuk menampung data tersebut.
+
 ***
 
 
